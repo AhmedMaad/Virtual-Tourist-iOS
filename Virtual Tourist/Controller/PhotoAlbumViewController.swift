@@ -31,11 +31,32 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         print(lat)
         print(lon)
         //try to fetch from DB, if no data is found so request new data immediately without user interaction
-        setupFetchedResultsController()
+        //setupFetchedResultsController()
         //fetchPicturesFromDB()
+        
+        //Search for the clicked pin in the database because this will help when we save/retrieve pictures
+        /*let fetchRequest:NSFetchRequest<Map> = Map.fetchRequest()
+        let predicate = NSPredicate(format: "latitude == %@ AND longitude == %@", NSNumber(value: view.annotation?.coordinate.latitude ?? 0.0)
+            , NSNumber(value: view.annotation?.coordinate.longitude ?? 0.0))
+        fetchRequest.predicate = predicate
+        var result: NSFetchedResultsController<Map> = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
+        fetchedResults.delegate = self
+        
+        do {
+            try fetchedResults.performFetch()
+        } catch {
+            fatalError("The fetch could not be performed: \(error.localizedDescription)")
+        }*/
+        
+        //This should be deleted
+        /*for pin in fetchedResults.fetchedObjects!{
+            photoController.map = pin
+        }*/
+        
+        
     }
     
-    func setupFetchedResultsController() {
+    /*func setupFetchedResultsController() {
         let fetchRequest:NSFetchRequest<Photo> = Photo.fetchRequest()
         let predicate = NSPredicate(format: "pin == %@", map)
         fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
@@ -46,7 +67,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         } catch {
             fatalError("The fetch could not be performed: \(error.localizedDescription)")
         }
-    }
+    }*/
     
     /*fileprivate func fetchPicturesFromDB() {
         var pictures = [Photo]()
@@ -62,6 +83,10 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath as IndexPath) as! CollectionItem
+        
+        //Show placeholder image while the actual image loads in the cell
+        cell.myImage.image = UIImage(named: "reload")
+        cell.backgroundColor = UIColor.cyan
         
         //Load the data from the retrieved API link
         let fileUrl = URL(string: images[indexPath.row].url_m)

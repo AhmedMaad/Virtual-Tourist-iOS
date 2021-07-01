@@ -96,31 +96,12 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
     
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
         print("Should show album view")
-        //let photoController = PhotoAlbumViewController()
+
         mapView.deselectAnnotation(view.annotation, animated: true)
         let photoController = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "Photo") as! PhotoAlbumViewController
         photoController.lat = view.annotation?.coordinate.latitude
         photoController.lon = view.annotation?.coordinate.longitude
         photoController.dataController = self.dataController
-        
-        //Search for the clicked pin in the database because this will help when we save/retrieve pictures
-        let fetchRequest:NSFetchRequest<Map> = Map.fetchRequest()
-        let predicate = NSPredicate(format: "latitude == %@ AND longitude == %@", NSNumber(value: view.annotation?.coordinate.latitude ?? 0.0)
-            , NSNumber(value: view.annotation?.coordinate.longitude ?? 0.0))
-        fetchRequest.predicate = predicate
-        fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
-        fetchedResults.delegate = self
-        
-        do {
-            try fetchedResults.performFetch()
-        } catch {
-            fatalError("The fetch could not be performed: \(error.localizedDescription)")
-        }
-        
-        for pin in fetchedResults.fetchedObjects!{
-            let x = pin
-            photoController.map = pin
-        }
         
         //Open PhotoAlbumViewController to request pictures related to lat, lng of the selected  pin
         present(photoController, animated: true, completion: nil)
