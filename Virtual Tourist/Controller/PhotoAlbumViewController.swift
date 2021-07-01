@@ -92,11 +92,21 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         let fileUrl = URL(string: images[indexPath.row].url_m)
         FlickerAPI.requestImage(url: fileUrl!) { (data, error) in
             DispatchQueue.main.async {
-                //Saving the photo to databaseb (How to save the photo to a specific pin!)
+                
+                //Before saving "new" pictures we have to delete "old" pictures if exists in the database
+                
+                
+                
+                //Code to save picture data in relation to pin
+                //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat & pin.longitude = retrievedLon
                 let photoDB = Photo(context: self.dataController.viewContext)
                 photoDB.imageData = data
+                photoDB.pin?.latitude = self.lat
+                photoDB.pin?.longitude = self.lon
                 try? self.dataController.viewContext.save()
+                print("Picture is saved")
                 
+                //Showing downloaded image in cell
                 let downloadedImage = UIImage(data: data!)
                 cell.myImage.image = downloadedImage
             }
