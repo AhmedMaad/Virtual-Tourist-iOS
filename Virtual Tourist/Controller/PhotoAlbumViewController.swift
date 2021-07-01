@@ -173,8 +173,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
                         let photoDB = Photo(context: self.dataController.viewContext)
                         photoDB.imageData = data
                         photoDB.pin = self.pin
-                        //photoDB.pin?.latitude = self.lat
-                        //photoDB.pin?.longitude = self.lon
+                        self.photos.append(photoDB)
                         try? self.dataController.viewContext.save()
                         
                         //Showing downloaded image in cell
@@ -217,13 +216,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         //Before saving "new" pictures we have to delete "old" pictures if exists in the database
         //Query: DELETE FROM Photo WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
         
-        /*let photoDB = Photo(context: self.dataController.viewContext)
-        //photoDB.pin?.latitude = lat
-        //photoDB.pin?.longitude = lon
-        photoDB.pin = pin
-        self.dataController.viewContext.delete(photoDB)
-        print("Old pictures are deleted")*/
-        
+        print("Old pictures are being deleted")
         for photo in photos{
             if(photo.pin?.latitude == lat && photo.pin?.longitude == lon){
                 print("Picture should be deleted")
