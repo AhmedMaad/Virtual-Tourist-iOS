@@ -12,16 +12,54 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
     var dataController: DataController!
     var fetchedResults: NSFetchedResultsController<Map>!
     
+    var maps: [Map] = []
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         mapView.delegate = self
-        setupFetchedResultsController()
-        fetchMapLocation()
+        
+        getAllLocations()
+        //fetchMapLocation()
         
         // Generate long-press
         let myLongPress: UILongPressGestureRecognizer = UILongPressGestureRecognizer()
         myLongPress.addTarget(self, action: #selector(recognizeLongPress(_:)))
         mapView.addGestureRecognizer(myLongPress)
+    }
+    
+    func getAllLocations() {
+        
+        let fetchRequest:NSFetchRequest<Map> = Map.fetchRequest()
+        if let result = try? dataController.viewContext.fetch(fetchRequest){
+            maps = result
+        }
+        
+        var annotations = [MKPointAnnotation]()
+        for location in maps{
+            let lat = location.latitude
+            let lng = location.longitude
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = coordinate
+            annotations.append(annotation)
+        }
+        mapView.addAnnotations(annotations)
+        
+        
+        /*let fetchRequest:NSFetchRequest<Map> = Map.fetchRequest()
+         let sortDescriptor = NSSortDescriptor(key: "latitude", ascending: false)
+         fetchRequest.sortDescriptors = [sortDescriptor]
+         
+         fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
+         fetchedResults.delegate = self
+         
+         do {
+         try fetchedResults.performFetch()
+         } catch {
+         fatalError("The fetch could not be performed: \(error.localizedDescription)")
+         }*/
+        
+        
     }
     
     
@@ -45,26 +83,11 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
         let mapDB = Map(context: dataController.viewContext)
         mapDB.latitude = lat
         mapDB.longitude = lng
+        maps.append(mapDB)
         try? dataController.viewContext.save()
     }
     
-    func setupFetchedResultsController() {
-        let fetchRequest:NSFetchRequest<Map> = Map.fetchRequest()
-        let sortDescriptor = NSSortDescriptor(key: "latitude", ascending: false)
-        fetchRequest.sortDescriptors = [sortDescriptor]
-        
-        fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
-        fetchedResults.delegate = self
-        
-        do {
-            try fetchedResults.performFetch()
-        } catch {
-            fatalError("The fetch could not be performed: \(error.localizedDescription)")
-        }
-    }
-    
-    
-    fileprivate func fetchMapLocation() {
+    /*fileprivate func fetchMapLocation() {
         var annotations = [MKPointAnnotation]()
         for coordinateObject in fetchedResults.fetchedObjects!{
             let lat = coordinateObject.latitude
@@ -75,7 +98,7 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
             annotations.append(annotation)
         }
         mapView.addAnnotations(annotations)
-    }
+    }*/
     
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         
@@ -102,6 +125,14 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
         photoController.lat = view.annotation?.coordinate.latitude
         photoController.lon = view.annotation?.coordinate.longitude
         photoController.dataController = self.dataController
+        
+        print("pins size are \(maps.count)")
+        for pin in maps{
+            if (view.annotation?.coordinate.latitude == pin.latitude && view.annotation?.coordinate.longitude == pin.longitude){
+                print("Sending pin object to photo album")
+                photoController.pin = pin
+            }
+        }
         
         //Open PhotoAlbumViewController to request pictures related to lat, lng of the selected  pin
         present(photoController, animated: true, completion: nil)

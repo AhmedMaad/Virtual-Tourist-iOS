@@ -43,7 +43,7 @@ class FlickerAPI{
             do{
                 let response = try JSONDecoder().decode(EncryptedPictureModel.self, from: data)
                 let allEncryptedPhotos = response.photos.photo
-                print(allEncryptedPhotos)
+                //print(allEncryptedPhotos)
                 completionHandler(allEncryptedPhotos, nil)
             }
             catch{

@@ -22,58 +22,135 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     var dataController: DataController!
     var map: Map!
     var uiImages: [UIImage?]?
-    var isDataLoadedFromDB: Bool!
-    var isDeletingImage: Bool!
+    var isDataLoadedFromDB: Bool = false
+    var isDeletingImage: Bool = false
+    
+    //Adding new Lines
+    var photos: [Photo] = []
+    var photoDatas: [Data] = []
+    var pin: Map!
+    
+    /*override func viewDidLoad() {
+     super.viewDidLoad()
+     print("Opened photo album view controller")
+     collectionView.delegate = self
+     collectionView.dataSource = self
+     print(lat)
+     print(lon)
+     
+     //Read data from DB by lat, lon, if the data exists then reload the collection view with the retrieved data
+     //if the data doesn't exist, then request new data from the server without user interaction
+     //Query: SELECT * FROM Photo WHERE photo.latitude = retrievedLat & photo.longitude = retrievedLon
+     let fetchRequest:NSFetchRequest<Photo> = Photo.fetchRequest()
+     let sortDescriptor = NSSortDescriptor(key: "imageData", ascending: false)
+     fetchRequest.sortDescriptors = [sortDescriptor]
+     let predicate = NSPredicate(format: "pin.latitude == %@ AND pin.longitude == %@", lat, lon)
+     fetchRequest.predicate = predicate
+     let fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
+     fetchedResults.delegate = self
+     
+     do {
+     try fetchedResults.performFetch()
+     print("Data is fetched from DB")
+     } catch {
+     fatalError("The fetch could not be performed: \(error.localizedDescription)")
+     }
+     
+     if(fetchedResults.fetchedObjects?.count == 0){
+     //No previous saved picture, request new one from the server
+     loadDataFromServer()
+     }
+     else{
+     isDataLoadedFromDB = true
+     for object in fetchedResults.fetchedObjects!{
+     print("Picture is found")
+     self.numberOfItems = fetchedResults.fetchedObjects?.count ?? 0
+     let image: UIImage? = UIImage(data: object.imageData!)
+     if(image != nil){
+     uiImages?.append(image)
+     }
+     }
+     collectionView.reloadData()
+     }
+     
+     }*/
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         print("Opened photo album view controller")
         collectionView.delegate = self
         collectionView.dataSource = self
-        print(lat)
-        print(lon)
         
-        //Read data from DB by lat, lon, if the data exists then reload the collection view with the retrieved data
-        //if the data doesn't exist, then request new data from the server without user interaction
-        //Query: SELECT * FROM Photo WHERE photo.latitude = retrievedLat & photo.longitude = retrievedLon
         let fetchRequest:NSFetchRequest<Photo> = Photo.fetchRequest()
-        let sortDescriptor = NSSortDescriptor(key: "imageData", ascending: false)
-        fetchRequest.sortDescriptors = [sortDescriptor]
-        let predicate = NSPredicate(format: "pin.latitude == %@ AND pin.longitude == %@", lat, lon)
-        fetchRequest.predicate = predicate
-        let fetchedResults = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
-        fetchedResults.delegate = self
-        
-        do {
-            try fetchedResults.performFetch()
-            print("Data is fetched from DB")
-        } catch {
-            fatalError("The fetch could not be performed: \(error.localizedDescription)")
+        if let result = try? dataController.viewContext.fetch(fetchRequest){
+            photos = result
         }
         
-        if(fetchedResults.fetchedObjects?.count == 0){
-            //No previous saved picture, request new one from the server
+        print("All photos in the array count are \(photos.count)")
+        for photo in photos{
+            if(photo.pin?.latitude == lat && photo.pin?.longitude == lon){
+                print("Adding photo from DB in to the array")
+                photoDatas.append(photo.imageData!)
+            }
+        }
+        
+        if (photoDatas.count == 0) {
+            print("photo datas is empty, requesting new data from server")
             loadDataFromServer()
         }
         else{
+            print(photoDatas.count)
             isDataLoadedFromDB = true
-            for object in fetchedResults.fetchedObjects!{
-                print("Picture is found")
-                self.numberOfItems = fetchedResults.fetchedObjects?.count ?? 0
-                let image: UIImage? = UIImage(data: object.imageData!)
-                if(image != nil){
-                    uiImages?.append(image)
-                }
-            }
+            numberOfItems = photoDatas.count
             collectionView.reloadData()
         }
-        
     }
+    
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         //Number of items in the collection view
         return numberOfItems //should be the number from he data source returned from flicker API or read from DB
     }
+    
+    /*func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+     let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath as IndexPath) as! CollectionItem
+     
+     if(!isDeletingImage){
+     //Show placeholder image while the actual image loads in the cell
+     cell.myImage.image = UIImage(named: "reload")
+     cell.backgroundColor = UIColor.cyan
+     
+     if (!isDataLoadedFromDB) {
+     //Load the data from the retrieved API link
+     print("Showing the pictures from the API")
+     let fileUrl = URL(string: images[indexPath.row].url_m)
+     FlickerAPI.requestImage(url: fileUrl!) { (data, error) in
+     DispatchQueue.main.async {
+     
+     //Code to save picture data in relation to pin
+     //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
+     let photoDB = Photo(context: self.dataController.viewContext)
+     photoDB.imageData = data
+     photoDB.pin?.latitude = self.lat
+     photoDB.pin?.longitude = self.lon
+     try? self.dataController.viewContext.save()
+     
+     //Showing downloaded image in cell
+     let downloadedImage = UIImage(data: data!)
+     cell.myImage.image = downloadedImage
+     }
+     }
+     
+     }
+     else{
+     print("Load the pictures from the DB")
+     cell.myImage.image = uiImages?[indexPath.row]
+     }
+     
+     }
+     return cell
+     }*/
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath as IndexPath) as! CollectionItem
@@ -94,8 +171,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
                         //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
                         let photoDB = Photo(context: self.dataController.viewContext)
                         photoDB.imageData = data
-                        photoDB.pin?.latitude = self.lat
-                        photoDB.pin?.longitude = self.lon
+                        photoDB.pin = self.pin
+                        //photoDB.pin?.latitude = self.lat
+                        //photoDB.pin?.longitude = self.lon
                         try? self.dataController.viewContext.save()
                         
                         //Showing downloaded image in cell
@@ -107,7 +185,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
             }
             else{
                 print("Load the pictures from the DB")
-                cell.myImage.image = uiImages?[indexPath.row]
+                let mImage = UIImage(data: photoDatas[indexPath.row])
+                cell.myImage.image = mImage
             }
             
         }
@@ -137,8 +216,9 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         //Before saving "new" pictures we have to delete "old" pictures if exists in the database
         //Query: DELETE FROM Photo WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
         let photoDB = Photo(context: self.dataController.viewContext)
-        photoDB.pin?.latitude = lat
-        photoDB.pin?.longitude = lon
+        //photoDB.pin?.latitude = lat
+        //photoDB.pin?.longitude = lon
+        photoDB.pin = pin
         self.dataController.viewContext.delete(photoDB)
         print("Old pictures are deleted")
         
