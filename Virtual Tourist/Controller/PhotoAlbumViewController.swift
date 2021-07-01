@@ -22,6 +22,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     //var fetchedResults: NSFetchedResultsController<Photo>!
     var dataController: DataController!
     var map: Map!
+    var uiImages: [UIImage?]?
+    var isDataLoadedFromDB: Bool!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,11 +36,6 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         //Read data from DB by lat, lon, if the data exists then reload the collection view with the retrieved data
         //if the data doesn't exist, then request new data from the server without user interaction
         //Query: SELECT * FROM Photo WHERE photo.latitude = retrievedLat & photo.longitude = retrievedLon
-        
-        /*let photoDB = Photo(context: dataController.viewContext)
-        photoDB.pin?.latitude = lat
-        photoDB.pin?.longitude = lon*/
-        
         let fetchRequest:NSFetchRequest<Photo> = Photo.fetchRequest()
         let sortDescriptor = NSSortDescriptor(key: "imageData", ascending: false)
         fetchRequest.sortDescriptors = [sortDescriptor]
@@ -54,55 +51,47 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
             fatalError("The fetch could not be performed: \(error.localizedDescription)")
         }
         
-        var data = [Data]()
         if(fetchedResults.fetchedObjects?.count == 0){
             //No previous saved picture, request new one from the server
             loadDataFromServer()
         }
         else{
-            for coordinateObject in fetchedResults.fetchedObjects!{
+            isDataLoadedFromDB = true
+            for object in fetchedResults.fetchedObjects!{
                 print("Picture is found")
-                /*let lat = coordinateObject.latitude
-                 let lng = coordinateObject.longitude
-                 let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-                 let annotation = MKPointAnnotation()
-                 annotation.coordinate = coordinate
-                 annotations.append(annotation)*/
+                self.numberOfItems = fetchedResults.fetchedObjects?.count ?? 0
+                let image: UIImage? = UIImage(data: object.imageData!)
+                if(image != nil){
+                    uiImages?.append(image)
+                }
             }
-            //reload collection view in this statement
+            collectionView.reloadData()
         }
         
-
+        
         //fetchPicturesFromDB()
         
         //Search for the clicked pin in the database because this will help when we save/retrieve pictures
         /*let fetchRequest:NSFetchRequest<Map> = Map.fetchRequest()
-        let predicate = NSPredicate(format: "latitude == %@ AND longitude == %@", NSNumber(value: view.annotation?.coordinate.latitude ?? 0.0)
-            , NSNumber(value: view.annotation?.coordinate.longitude ?? 0.0))
-        fetchRequest.predicate = predicate
-        var result: NSFetchedResultsController<Map> = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
-        fetchedResults.delegate = self
-        
-        do {
-            try fetchedResults.performFetch()
-        } catch {
-            fatalError("The fetch could not be performed: \(error.localizedDescription)")
-        }*/
+         let predicate = NSPredicate(format: "latitude == %@ AND longitude == %@", NSNumber(value: view.annotation?.coordinate.latitude ?? 0.0)
+         , NSNumber(value: view.annotation?.coordinate.longitude ?? 0.0))
+         fetchRequest.predicate = predicate
+         var result: NSFetchedResultsController<Map> = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: dataController.viewContext, sectionNameKeyPath: nil, cacheName: "mapAnnotations")
+         fetchedResults.delegate = self
+         
+         do {
+         try fetchedResults.performFetch()
+         } catch {
+         fatalError("The fetch could not be performed: \(error.localizedDescription)")
+         }*/
         
         //This should be deleted
         /*for pin in fetchedResults.fetchedObjects!{
-            photoController.map = pin
-        }*/
+         photoController.map = pin
+         }*/
         
         
     }
-    
-    /*fileprivate func fetchPicturesFromDB() {
-        var pictures = [Photo]()
-        for photo in fetchedResults.fetchedObjects!{
-            pictures.append(photo)
-        }
-    }*/
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         //Number of items in the collection view
@@ -116,24 +105,33 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         cell.myImage.image = UIImage(named: "reload")
         cell.backgroundColor = UIColor.cyan
         
-        //Load the data from the retrieved API link
-        let fileUrl = URL(string: images[indexPath.row].url_m)
-        FlickerAPI.requestImage(url: fileUrl!) { (data, error) in
-            DispatchQueue.main.async {
-                
-                //Code to save picture data in relation to pin
-                //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
-                let photoDB = Photo(context: self.dataController.viewContext)
-                photoDB.imageData = data
-                photoDB.pin?.latitude = self.lat
-                photoDB.pin?.longitude = self.lon
-                try? self.dataController.viewContext.save()
-                
-                //Showing downloaded image in cell
-                let downloadedImage = UIImage(data: data!)
-                cell.myImage.image = downloadedImage
+        if (!isDataLoadedFromDB) {
+            //Load the data from the retrieved API link
+            print("Showing the pictures from the API")
+            let fileUrl = URL(string: images[indexPath.row].url_m)
+            FlickerAPI.requestImage(url: fileUrl!) { (data, error) in
+                DispatchQueue.main.async {
+                    
+                    //Code to save picture data in relation to pin
+                    //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
+                    let photoDB = Photo(context: self.dataController.viewContext)
+                    photoDB.imageData = data
+                    photoDB.pin?.latitude = self.lat
+                    photoDB.pin?.longitude = self.lon
+                    try? self.dataController.viewContext.save()
+                    
+                    //Showing downloaded image in cell
+                    let downloadedImage = UIImage(data: data!)
+                    cell.myImage.image = downloadedImage
+                }
             }
-        }        
+            
+        }
+        else{
+            print("Load the pictures from the DB")
+            cell.myImage.image = uiImages?[indexPath.row]
+        }
+        
         return cell
     }
     
@@ -147,6 +145,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     }
     
     func loadDataFromServer(){
+        isDataLoadedFromDB = false
         //Before saving "new" pictures we have to delete "old" pictures if exists in the database
         //Query: DELETE FROM Photo WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
         let photoDB = Photo(context: self.dataController.viewContext)
@@ -155,8 +154,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         self.dataController.viewContext.delete(photoDB)
         print("Old pictures are deleted")
         
-        
-        print("Should load new collection")
+        print("Loading new collection")
         FlickerAPI.getPicsEncryptedData(lat: lat, lon: lon, completionHandler: handleEncryptedPictureResponse(encryptedImages:error:))
     }
     
