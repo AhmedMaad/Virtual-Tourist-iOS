@@ -30,6 +30,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     var photoDatas: [Data] = []
     var pin: Map!
     
+    
     /*override func viewDidLoad() {
      super.viewDidLoad()
      print("Opened photo album view controller")
@@ -215,12 +216,26 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         isDeletingImage = false
         //Before saving "new" pictures we have to delete "old" pictures if exists in the database
         //Query: DELETE FROM Photo WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
-        let photoDB = Photo(context: self.dataController.viewContext)
+        
+        /*let photoDB = Photo(context: self.dataController.viewContext)
         //photoDB.pin?.latitude = lat
         //photoDB.pin?.longitude = lon
         photoDB.pin = pin
         self.dataController.viewContext.delete(photoDB)
-        print("Old pictures are deleted")
+        print("Old pictures are deleted")*/
+        
+        for photo in photos{
+            if(photo.pin?.latitude == lat && photo.pin?.longitude == lon){
+                print("Picture should be deleted")
+                dataController.viewContext.delete(photo)
+                do {
+                    try dataController.viewContext.save()
+                    print("Picture is deleted")
+                } catch {
+                    print("Picture is not deleted")
+                }
+            }
+        }
         
         print("Loading new collection")
         FlickerAPI.getPicsEncryptedData(lat: lat, lon: lon, completionHandler: handleEncryptedPictureResponse(encryptedImages:error:))
