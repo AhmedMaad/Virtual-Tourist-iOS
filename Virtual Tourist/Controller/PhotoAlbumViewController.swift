@@ -93,12 +93,8 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         FlickerAPI.requestImage(url: fileUrl!) { (data, error) in
             DispatchQueue.main.async {
                 
-                //Before saving "new" pictures we have to delete "old" pictures if exists in the database
-                
-                
-                
                 //Code to save picture data in relation to pin
-                //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat & pin.longitude = retrievedLon
+                //Query: INSERT INTO Photo (imageData) VALUES (data) WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
                 let photoDB = Photo(context: self.dataController.viewContext)
                 photoDB.imageData = data
                 photoDB.pin?.latitude = self.lat
@@ -120,6 +116,15 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     }
     
     @IBAction func loadNewCollection(_ sender: Any) {
+        //Before saving "new" pictures we have to delete "old" pictures if exists in the database
+        //Query: DELETE FROM Photo WHERE pin.latitude = retrievedLat AND pin.longitude = retrievedLon
+        let photoDB = Photo(context: self.dataController.viewContext)
+        photoDB.pin?.latitude = lat
+        photoDB.pin?.longitude = lon
+        self.dataController.viewContext.delete(photoDB)
+        print("Old pictures are deleted")
+        
+        
         print("Should load new collection")
         FlickerAPI.getPicsEncryptedData(lat: lat, lon: lon, completionHandler: handleEncryptedPictureResponse(encryptedImages:error:))
     }
