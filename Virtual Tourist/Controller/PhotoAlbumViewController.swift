@@ -29,6 +29,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
     var photos: [Photo] = []
     var photoDatas: [Data] = []
     var pin: Map!
+    var photosToDelete: [Photo] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -46,6 +47,7 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
             if(photo.pin?.latitude == lat && photo.pin?.longitude == lon){
                 print("Adding photo from DB in to the array")
                 photoDatas.append(photo.imageData!)
+                photosToDelete.append(photo)
             }
         }
         
@@ -122,11 +124,30 @@ class PhotoAlbumViewController: UIViewController, UICollectionViewDelegate, UICo
         if(isDataLoadedFromDB){
             //remove from db array only
             print("Deleting picture from DB array")
+            
+            dataController.viewContext.delete(photosToDelete[indexPath.row])
+            do {
+                try dataController.viewContext.save()
+                print("Picture is deleted")
+            } catch {
+                print("Picture is not deleted")
+            }
+            
             photoDatas.remove(at: indexPath.row)
+            
         }
         else{
             //remove from server array and from db array because we save pictures
             print("Deleting picture from DB and Server Arrays")
+            
+            dataController.viewContext.delete(photos[indexPath.row])
+            do {
+                try dataController.viewContext.save()
+                print("Picture is deleted")
+            } catch {
+                print("Picture is not deleted")
+            }
+            
             photoDatas.remove(at: indexPath.row)
             images.remove(at: indexPath.row)
         }
